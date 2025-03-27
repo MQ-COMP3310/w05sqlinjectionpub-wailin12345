@@ -1,6 +1,7 @@
 package workshop05code;
 
 import java.io.IOException;
+import java.rmi.ServerError;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -18,17 +19,18 @@ import java.util.logging.Logger;
 
 public class SQLiteConnectionManager {
     //Start code logging exercise
+    private static final Logger logger = Logger.getLogger(SQLiteConnectionManager.class.getName());
+
     static {
         // must set before the Logger
         // loads logging.properties from the classpath
         try {// resources\logging.properties
             LogManager.getLogManager().readConfiguration(new FileInputStream("resources/logging.properties"));
         } catch (SecurityException | IOException e1) {
-            e1.printStackTrace();
+            logger.log(Level.SEVERE, "Failed to load logging configuration", e1 );
         }
-    }
+    } 
 
-    private static final Logger logger = Logger.getLogger(SQLiteConnectionManager.class.getName());
     //End code logging exercise
     
     private String databaseURL = "";
@@ -64,12 +66,13 @@ public class SQLiteConnectionManager {
         try (Connection conn = DriverManager.getConnection(databaseURL)) {
             if (conn != null) {
                 DatabaseMetaData meta = conn.getMetaData();
-                System.out.println("The driver name is " + meta.getDriverName());
-                System.out.println("A new database has been created.");
-
+                //System.out.println("The driver name is " + meta.getDriverName());
+                //System.out.println("A new database has been created.");
+                logger.log(Level.INFO, "Database created with driver: {0}", meta.getDriverName());
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            //System.out.println(e.getMessage());
+            logger.log(Level.INFO, "Failed to create a new database", e);
         }
     }
 
@@ -81,6 +84,7 @@ public class SQLiteConnectionManager {
      */
     public boolean checkIfConnectionDefined() {
         if (databaseURL.equals("")) {
+            logger.log(Level.WARNING, "No database URL defined");
             return false;
         } else {
             try (Connection conn = DriverManager.getConnection(databaseURL)) {
@@ -88,7 +92,8 @@ public class SQLiteConnectionManager {
                     return true;
                 }
             } catch (SQLException e) {
-                System.out.println(e.getMessage());
+                //System.out.println(e.getMessage());
+                logger.log(Level.SEVERE, "Failed to establish database connection", e);
                 return false;
             }
         }
@@ -102,6 +107,7 @@ public class SQLiteConnectionManager {
      */
     public boolean createWordleTables() {
         if (databaseURL.equals("")) {
+            logger.log(Level.WARNING, "No database URL defined for table creation");
             return false;
         } else {
             try (Connection conn = DriverManager.getConnection(databaseURL);
@@ -110,10 +116,12 @@ public class SQLiteConnectionManager {
                 stmt.execute(WORDLE_CREATE_STRING);
                 stmt.execute(VALID_WORDS_DROP_TABLE_STRING);
                 stmt.execute(VALID_WORDS_CREATE_STRING);
+                logger.log(Level.INFO, "Wordle tables created successfully");
                 return true;
 
             } catch (SQLException e) {
-                System.out.println(e.getMessage());
+                //System.out.println(e.getMessage());
+                logger.log(Level.SEVERE, "Failed to create Wordle tables", e);
                 return false;
             }
         }
@@ -133,13 +141,13 @@ public class SQLiteConnectionManager {
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
                     pstmt.setInt(1,id);
                     pstmt.setString(2,word);
-            pstmt.executeUpdate();
+                    pstmt.executeUpdate();
+                    logger.log(Level.FINE, "Added valid word: {0} with id: {1}", new Object[]{word, id});
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-
+            //System.out.println(e.getMessage());
+            logger.log(Level.SEVERE, "Failed to add valid word: {0}", new Object[]{word, e});
     }
-
+    }
     /**
      * Possible weakness here?
      * 
@@ -152,20 +160,22 @@ public class SQLiteConnectionManager {
         try (Connection conn = DriverManager.getConnection(databaseURL);
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setString(1,guess);
-                
-
-            ResultSet resultRows = stmt.executeQuery();
-            if (resultRows.next()) {
-                int result = resultRows.getInt("total");
-                return (result >= 1);
-            }
-
+                    ResultSet resultRows = stmt.executeQuery();
+                if (resultRows.next()) {
+                    int result = resultRows.getInt("total");
+                    logger.log(Level.FINE, "Checked word: {0}, found: {1}", new Object[]{guess, result >= 1});
+                    return (result >= 1);
+                }
+            logger.log(Level.FINE, "Checked word: {0}, no results found", guess);
             return false;
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            logger.log(Level.SEVERE, "Failed to check if word is valid: " + guess, e);
+                        //System.out.println(e.getMessage());
             return false;
         }
 
+    
     }
 }
+

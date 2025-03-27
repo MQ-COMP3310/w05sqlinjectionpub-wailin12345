@@ -38,13 +38,13 @@ public class App {
 
         wordleDatabaseConnection.createNewDatabase("words.db");
         if (wordleDatabaseConnection.checkIfConnectionDefined()) {
-            System.out.println("Wordle created and connected.");
+            //System.out.println("Wordle created and connected.");
         } else {
             System.out.println("Not able to connect. Sorry!");
             return;
         }
         if (wordleDatabaseConnection.createWordleTables()) {
-            System.out.println("Wordle structures in place.");
+            //System.out.println("Wordle structures in place.");
         } else {
             System.out.println("Not able to launch. Sorry!");
             return;
@@ -56,14 +56,17 @@ public class App {
             String line;
             int i = 1;
             while ((line = br.readLine()) != null) {
-                System.out.println(line);
-                wordleDatabaseConnection.addValidWord(i, line);
-                i++;
+                if (line.matches("^[a-z]{4}$")) {
+                    wordleDatabaseConnection.addValidWord(i, line);
+                    logger.log(Level.INFO, "Added valid word: {0}", line);
+                    i++;
+                } else {
+                    logger.log(Level.SEVERE, "Invalid word in data.txt: {0}", line);
+                }
             }
-
         } catch (IOException e) {
-            System.out.println("Not able to load . Sorry!");
-            System.out.println(e.getMessage());
+            System.out.println("Not able to load words. Sorry!");
+            logger.log(Level.SEVERE, "Failed to load words from data.txt", e);
             return;
         }
 
@@ -74,6 +77,7 @@ public class App {
             String guess = scanner.nextLine();
 
             while (!guess.equals("q")) {
+                if(guess.matches("^[a-z]{4}"))  {
                 System.out.println("You've guessed '" + guess+"'.");
 
                 if (wordleDatabaseConnection.isValidWord(guess)) { 
@@ -81,12 +85,17 @@ public class App {
                 }else{
                     System.out.println("Sorry. This word is NOT in the the list.\n");
                 }
+                } else{
+                logger.log(Level.WARNING, "Invalid guess attempt: {0}", guess);
+                System.out.println(("The word ("+ guess + ") is not a valid input"));
+                }
 
                 System.out.print("Enter a 4 letter word for a guess or q to quit: " );
                 guess = scanner.nextLine();
             }
         } catch (NoSuchElementException | IllegalStateException e) {
-            e.printStackTrace();
+            logger.log(Level.WARNING, "Error reading user input", e);       
+            System.out.println("An error occurred while reading input. Program will exit.");
         }
 
     }
